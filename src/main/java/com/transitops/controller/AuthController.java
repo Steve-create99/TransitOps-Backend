@@ -5,10 +5,13 @@ import com.transitops.dto.LoginRequest;
 import com.transitops.dto.RefreshRequest;
 import com.transitops.dto.RegisterRequest;
 import com.transitops.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -37,5 +40,14 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
         return ResponseEntity.ok(authService.refresh(request));
+    }
+
+    // POST /api/auth/logout
+    // Header: Authorization: Bearer <accessToken>
+    // Revokes access + refresh tokens in the DB — token is immediately invalid
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) {
+        authService.logout(request.getHeader("Authorization"));
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 }

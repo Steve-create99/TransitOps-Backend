@@ -1,5 +1,6 @@
 package com.transitops.filter;
 
+import com.transitops.repository.TokenRepository;
 import com.transitops.service.JwtService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -28,6 +29,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenRepository tokenRepository;
 
     @Override
     protected void doFilterInternal(
@@ -51,17 +53,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
-                if (jwtService.isAccessTokenValid(jwt, userDetails)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
+                // 1. Validate JWT signature, expiry, and token type
+                boolean jwtValid = jwtService.isAccessTokenValid(jwt, userDetails);
+
+                // 2. Validate token exists in DB and has not been revoked
+                boolean dbValid = tokenRepository.findByToken(jwt)
+                        .map(t -> !t.isRevoked() && !t.isExpired())
+                        .orElse(false);
+
+                if (jwtValid && dbValid) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities()
+                            );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                } else {
-                    // Token is structurally valid but wrong type (e.g. refresh token sent as access)
+                } else if (!jwtValid) {
+                    // Structurally valid JWT but wrong type (refresh token sent as access)
                     sendError(response, HttpStatus.UNAUTHORIZED, "Invalid token type — use an access token");
+                    return;
+                } else {
+                    // JWT is valid but token has been revoked in the DB
+                    sendError(response, HttpStatus.UNAUTHORIZED, "Token has been revoked — please log in again");
                     return;
                 }
             }
