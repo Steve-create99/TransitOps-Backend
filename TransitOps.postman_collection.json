@@ -1,0 +1,213 @@
+{
+  "info": {
+    "name": "TransitOps API",
+    "description": "JWT Authentication routes for the TransitOps backend. Run Register or Login first to get a token, then use it for protected routes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "JWT token — auto-populated after Register or Login"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) {",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "    console.log('Token saved:', json.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Kwame\",\n  \"lastName\": \"Asante\",\n  \"email\": \"admin@transitops.gh\",\n  \"role\": \"ADMIN\",\n  \"password\": \"admin1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Register a new ADMIN user. The JWT token is automatically saved to the `token` collection variable."
+          },
+          "response": [
+            {
+              "name": "201 Created — Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiJ9...\",\n  \"email\": \"admin@transitops.gh\",\n  \"firstName\": \"Kwame\",\n  \"lastName\": \"Asante\",\n  \"role\": \"ADMIN\",\n  \"message\": \"Account created successfully\"\n}"
+            },
+            {
+              "name": "400 Bad Request — Email already registered",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"error\": \"Email already registered\"\n}"
+            },
+            {
+              "name": "400 Bad Request — Validation failure",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"password\": \"Password must be at least 8 characters\",\n  \"email\": \"Invalid email format\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register (DRIVER)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) {",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "    console.log('Token saved:', json.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Kofi\",\n  \"lastName\": \"Mensah\",\n  \"email\": \"driver@transitops.gh\",\n  \"role\": \"DRIVER\",\n  \"password\": \"driver1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Register a new DRIVER user."
+          },
+          "response": [
+            {
+              "name": "200 OK — Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiJ9...\",\n  \"email\": \"driver@transitops.gh\",\n  \"firstName\": \"Kofi\",\n  \"lastName\": \"Mensah\",\n  \"role\": \"DRIVER\",\n  \"message\": \"Account created successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) {",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "    console.log('Token saved:', json.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@transitops.gh\",\n  \"password\": \"admin1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login with an existing account. Returns a JWT token which is auto-saved to the `token` variable."
+          },
+          "response": [
+            {
+              "name": "200 OK — Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiJ9...\",\n  \"email\": \"admin@transitops.gh\",\n  \"firstName\": \"Kwame\",\n  \"lastName\": \"Asante\",\n  \"role\": \"ADMIN\",\n  \"message\": \"Login successful\"\n}"
+            },
+            {
+              "name": "400 Bad Request — Wrong credentials",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"error\": \"Bad credentials\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Protected (examples)",
+      "description": "These are placeholder requests showing how to call protected endpoints using the saved JWT token. Add your real protected routes here.",
+      "item": [
+        {
+          "name": "Example — Protected GET",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "description": "Token is auto-filled from the Register/Login test script"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/example",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "example"]
+            },
+            "description": "Replace /api/example with any protected route. The Bearer token is pulled from the `token` collection variable set after login."
+          },
+          "response": [
+            {
+              "name": "401 Unauthorized — Missing or invalid token",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
