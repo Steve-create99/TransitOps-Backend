@@ -5,7 +5,7 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl",      "value": "http://localhost:8080", "type": "string" },
+    { "key": "baseUrl",      "value": "https://transitops-backend-production.up.railway.app", "type": "string" },
     { "key": "accessToken",  "value": "", "type": "string", "description": "Short-lived (15 min). Auto-populated after Register or Login." },
     { "key": "refreshToken", "value": "", "type": "string", "description": "Long-lived (7 days). Auto-populated after Register or Login." }
   ],

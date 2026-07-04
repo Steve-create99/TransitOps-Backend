@@ -1,6 +1,6 @@
 package com.transitops.filter;
 
-import com.transitops.repository.TokenRepository;
+import com.transitops.entity.User;
 import com.transitops.service.JwtService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -29,7 +29,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final TokenRepository tokenRepository;
 
     @Override
     protected void doFilterInternal(
@@ -56,10 +55,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 // 1. Validate JWT signature, expiry, and token type
                 boolean jwtValid = jwtService.isAccessTokenValid(jwt, userDetails);
 
-                // 2. Validate token exists in DB and has not been revoked
-                boolean dbValid = tokenRepository.findByToken(jwt)
-                        .map(t -> !t.isRevoked() && !t.isExpired())
-                        .orElse(false);
+                // 2. Validate token matches the stored accessToken in User table
+                User user = (User) userDetails;
+                boolean dbValid = user.getAccessToken() != null && user.getAccessToken().equals(jwt);
 
                 if (jwtValid && dbValid) {
                     UsernamePasswordAuthenticationToken authToken =
@@ -73,7 +71,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     sendError(response, HttpStatus.UNAUTHORIZED, "Invalid token type — use an access token");
                     return;
                 } else {
-                    // JWT is valid but token has been revoked in the DB
+                    // JWT is valid but token has been revoked / does not match active session token
                     sendError(response, HttpStatus.UNAUTHORIZED, "Token has been revoked — please log in again");
                     return;
                 }
