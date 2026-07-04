@@ -2,12 +2,15 @@ package com.transitops.service;
 
 import com.transitops.dto.AuthResponse;
 import com.transitops.dto.LoginRequest;
+import com.transitops.dto.RefreshRequest;
 import com.transitops.dto.RegisterRequest;
 import com.transitops.entity.User;
 import com.transitops.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +22,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final UserDetailsService userDetailsService;
+
+    // ── Register ──────────────────────────────────────────────────────────────
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -35,17 +41,10 @@ public class AuthService {
 
         userRepository.save(user);
 
-        String token = jwtService.generateToken(user);
-
-        return AuthResponse.builder()
-                .token(token)
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .role(user.getRole())
-                .message("Account created successfully")
-                .build();
+        return buildAuthResponse(user, "Account created successfully");
     }
+
+    // ── Login ─────────────────────────────────────────────────────────────────
 
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
@@ -58,15 +57,47 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String token = jwtService.generateToken(user);
+        return buildAuthResponse(user, "Login successful");
+    }
+
+    // ── Refresh ───────────────────────────────────────────────────────────────
+
+    public AuthResponse refresh(RefreshRequest request) {
+        final String refreshToken = request.getRefreshToken();
+        final String email = jwtService.extractEmail(refreshToken);
+
+        User user = (User) userDetailsService.loadUserByUsername(email);
+
+        if (!jwtService.isRefreshTokenValid(refreshToken, user)) {
+            throw new RuntimeException("Invalid or expired refresh token");
+        }
 
         return AuthResponse.builder()
-                .token(token)
+                .accessToken(jwtService.generateAccessToken(user))
+                .refreshToken(refreshToken)          // reuse existing refresh token
+                .expiresIn(jwtService.getAccessExpirationMs())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .role(user.getRole())
-                .message("Login successful")
+                .createdAt(user.getCreatedAt())
+                .message("Token refreshed successfully")
+                .build();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private AuthResponse buildAuthResponse(User user, String message) {
+        return AuthResponse.builder()
+                .accessToken(jwtService.generateAccessToken(user))
+                .refreshToken(jwtService.generateRefreshToken(user))
+                .expiresIn(jwtService.getAccessExpirationMs())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .role(user.getRole())
+                .createdAt(user.getCreatedAt())
+                .message(message)
                 .build();
     }
 }

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "TransitOps API",
-    "description": "JWT Authentication routes for TransitOps.\n\n**Quick start:**\n1. Run the app — seeded users are created automatically in Neon.\n2. Call Login with any seeded credential below.\n3. The token is auto-saved. All protected requests use it via {{token}}.",
+    "description": "JWT Authentication routes for TransitOps.\n\n**Quick start:**\n1. Run the app — seeded users are created automatically in Neon.\n2. Call **Login** with any seeded credential below.\n3. `accessToken` and `refreshToken` are auto-saved to collection variables.\n4. All protected requests use `{{accessToken}}` via the Authorization header.\n5. When your access token expires (15 min) call **Refresh Token** to get a new one.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -11,10 +11,16 @@
       "type": "string"
     },
     {
-      "key": "token",
+      "key": "accessToken",
       "value": "",
       "type": "string",
-      "description": "Auto-populated after Register or Login"
+      "description": "Short-lived access token (15 min). Auto-populated after Register or Login."
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string",
+      "description": "Long-lived refresh token (7 days). Auto-populated after Register or Login."
     }
   ],
   "item": [
@@ -29,9 +35,12 @@
               "script": {
                 "exec": [
                   "var json = pm.response.json();",
-                  "if (json.token) {",
-                  "    pm.collectionVariables.set('token', json.token);",
-                  "    console.log('Token saved:', json.token);",
+                  "if (json.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "    console.log('Access token saved:', json.accessToken);",
+                  "    console.log('Refresh token saved:', json.refreshToken);",
+                  "    console.log('Expires in (ms):', json.expiresIn);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -50,7 +59,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "register"]
             },
-            "description": "Creates a new ADMIN account. Token is auto-saved to {{token}}.\n\nValid roles: ADMIN, DRIVER\nPassword: min 8 characters"
+            "description": "Creates a new ADMIN account.\n\nValid roles: ADMIN, DRIVER\nPassword: min 8 characters\n\nSaves both `accessToken` (15 min) and `refreshToken` (7 days) to collection variables."
           }
         },
         {
@@ -61,9 +70,11 @@
               "script": {
                 "exec": [
                   "var json = pm.response.json();",
-                  "if (json.token) {",
-                  "    pm.collectionVariables.set('token', json.token);",
-                  "    console.log('Token saved:', json.token);",
+                  "if (json.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "    console.log('Access token saved:', json.accessToken);",
+                  "    console.log('Refresh token saved:', json.refreshToken);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -82,7 +93,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "register"]
             },
-            "description": "Creates a new DRIVER account. Token is auto-saved to {{token}}."
+            "description": "Creates a new DRIVER account. Saves both tokens to collection variables."
           }
         },
         {
@@ -93,9 +104,12 @@
               "script": {
                 "exec": [
                   "var json = pm.response.json();",
-                  "if (json.token) {",
-                  "    pm.collectionVariables.set('token', json.token);",
-                  "    console.log('Token saved:', json.token);",
+                  "if (json.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "    console.log('Access token saved:', json.accessToken);",
+                  "    console.log('Refresh token saved:', json.refreshToken);",
+                  "    console.log('Account created at:', json.createdAt);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -114,7 +128,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "login"]
             },
-            "description": "Logs in with the seeded ADMIN account (auto-created on app startup).\n\nSeeded credentials:\n  email: admin@transitops.gh\n  password: admin1234\n  name: Kwame Asante\n\nToken is auto-saved to {{token}}."
+            "description": "Logs in with the seeded ADMIN account (auto-created on app startup).\n\nSeeded credentials:\n  email: admin@transitops.gh\n  password: admin1234\n  name: Kwame Asante\n\nSaves both `accessToken` and `refreshToken` to collection variables."
           }
         },
         {
@@ -125,9 +139,11 @@
               "script": {
                 "exec": [
                   "var json = pm.response.json();",
-                  "if (json.token) {",
-                  "    pm.collectionVariables.set('token', json.token);",
-                  "    console.log('Token saved:', json.token);",
+                  "if (json.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "    console.log('Access token saved:', json.accessToken);",
+                  "    console.log('Refresh token saved:', json.refreshToken);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -157,9 +173,11 @@
               "script": {
                 "exec": [
                   "var json = pm.response.json();",
-                  "if (json.token) {",
-                  "    pm.collectionVariables.set('token', json.token);",
-                  "    console.log('Token saved:', json.token);",
+                  "if (json.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "    console.log('Access token saved:', json.accessToken);",
+                  "    console.log('Refresh token saved:', json.refreshToken);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -179,6 +197,39 @@
               "path": ["api", "auth", "login"]
             },
             "description": "Logs in with the second seeded DRIVER account.\n\nSeeded credentials:\n  email: driver2@transitops.gh\n  password: driver1234\n  name: Ama Owusu"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    console.log('New access token saved:', json.accessToken);",
+                  "    console.log('Expires in (ms):', json.expiresIn);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Exchange the long-lived refresh token for a new short-lived access token.\n\nThe refresh token itself stays the same (no rotation in this implementation).\nNew `accessToken` is auto-saved to {{accessToken}}.\n\nExpects 400 if the refresh token is expired or invalid."
           }
         },
         {
@@ -236,7 +287,7 @@
     },
     {
       "name": "Protected Routes",
-      "description": "All requests here require a valid JWT. Login first — the token is auto-saved to {{token}}.",
+      "description": "All requests here require a valid access token. Login first — `accessToken` is auto-saved to collection variables.",
       "item": [
         {
           "name": "Example — authenticated request",
@@ -245,7 +296,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{accessToken}}"
               }
             ],
             "url": {
@@ -253,7 +304,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "example"]
             },
-            "description": "Replace /api/example with any real protected route you add later.\n\nIf the token is missing or expired you get 401 Unauthorized."
+            "description": "Replace /api/example with any real protected route you add later.\n\nIf the access token is missing or expired you get 401 Unauthorized.\nUse the 'Refresh Token' request to get a new access token."
           }
         },
         {
@@ -267,6 +318,24 @@
               "path": ["api", "example"]
             },
             "description": "Sends request without Authorization header. Expects 401 Unauthorized."
+          }
+        },
+        {
+          "name": "Example — refresh token used as access (expect 401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/example",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "example"]
+            },
+            "description": "Deliberately sends the refresh token as if it were an access token.\nExpects 401 with { \"error\": \"Invalid token type — use an access token\" }"
           }
         }
       ]
