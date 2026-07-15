@@ -46,6 +46,12 @@ public class User implements UserDetails {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(columnDefinition = "TEXT")
+    private String accessToken;
+
+    @Column(columnDefinition = "TEXT")
+    private String refreshToken;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));

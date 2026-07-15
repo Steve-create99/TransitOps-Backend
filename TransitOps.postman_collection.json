@@ -1,27 +1,13 @@
 {
   "info": {
     "name": "TransitOps API",
-    "description": "JWT Authentication routes for TransitOps.\n\n**Quick start:**\n1. Run the app — seeded users are created automatically in Neon.\n2. Call **Login** with any seeded credential below.\n3. `accessToken` and `refreshToken` are auto-saved to collection variables.\n4. All protected requests use `{{accessToken}}` via the Authorization header.\n5. When your access token expires (15 min) call **Refresh Token** to get a new one.",
+    "description": "JWT Authentication routes for TransitOps.\n\n**Quick start:**\n1. Run the app — seeded users are created automatically in Neon.\n2. Call **Login** with any seeded credential.\n3. `accessToken` and `refreshToken` are auto-saved to collection variables.\n4. All protected requests use `{{accessToken}}`.\n5. When access token expires (15 min), call **Refresh Token**.\n6. Call **Sign Out** to revoke all tokens immediately.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:8080",
-      "type": "string"
-    },
-    {
-      "key": "accessToken",
-      "value": "",
-      "type": "string",
-      "description": "Short-lived access token (15 min). Auto-populated after Register or Login."
-    },
-    {
-      "key": "refreshToken",
-      "value": "",
-      "type": "string",
-      "description": "Long-lived refresh token (7 days). Auto-populated after Register or Login."
-    }
+    { "key": "baseUrl",      "value": "https://transitops-backend-production.up.railway.app", "type": "string" },
+    { "key": "accessToken",  "value": "", "type": "string", "description": "Short-lived (15 min). Auto-populated after Register or Login." },
+    { "key": "refreshToken", "value": "", "type": "string", "description": "Long-lived (7 days). Auto-populated after Register or Login." }
   ],
   "item": [
     {
@@ -29,207 +15,129 @@
       "item": [
         {
           "name": "Register — new ADMIN",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var json = pm.response.json();",
-                  "if (json.accessToken) {",
-                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
-                  "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
-                  "    console.log('Access token saved:', json.accessToken);",
-                  "    console.log('Refresh token saved:', json.refreshToken);",
-                  "    console.log('Expires in (ms):', json.expiresIn);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.accessToken) {",
+            "    pm.collectionVariables.set('accessToken',  json.accessToken);",
+            "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+            "    console.log('accessToken:',  json.accessToken);",
+            "    console.log('refreshToken:', json.refreshToken);",
+            "    console.log('createdAt:',    json.createdAt);",
+            "}"
+          ]}}],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Abena\",\n  \"lastName\": \"Boateng\",\n  \"email\": \"abena@transitops.gh\",\n  \"role\": \"ADMIN\",\n  \"password\": \"admin1234\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "register"]
-            },
-            "description": "Creates a new ADMIN account.\n\nValid roles: ADMIN, DRIVER\nPassword: min 8 characters\n\nSaves both `accessToken` (15 min) and `refreshToken` (7 days) to collection variables."
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Abena\",\n  \"lastName\": \"Boateng\",\n  \"email\": \"abena@transitops.gh\",\n  \"role\": \"ADMIN\",\n  \"password\": \"admin1234\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+            "description": "Creates a new ADMIN account. Both tokens saved to DB and collection variables.\n\nValid roles: ADMIN, DRIVER | Password: min 8 characters"
           }
         },
         {
           "name": "Register — new DRIVER",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var json = pm.response.json();",
-                  "if (json.accessToken) {",
-                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
-                  "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
-                  "    console.log('Access token saved:', json.accessToken);",
-                  "    console.log('Refresh token saved:', json.refreshToken);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.accessToken) {",
+            "    pm.collectionVariables.set('accessToken',  json.accessToken);",
+            "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+            "    console.log('accessToken:',  json.accessToken);",
+            "    console.log('refreshToken:', json.refreshToken);",
+            "}"
+          ]}}],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Yaw\",\n  \"lastName\": \"Darko\",\n  \"email\": \"yaw@transitops.gh\",\n  \"role\": \"DRIVER\",\n  \"password\": \"driver1234\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "register"]
-            },
-            "description": "Creates a new DRIVER account. Saves both tokens to collection variables."
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Yaw\",\n  \"lastName\": \"Darko\",\n  \"email\": \"yaw@transitops.gh\",\n  \"role\": \"DRIVER\",\n  \"password\": \"driver1234\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }
           }
         },
         {
           "name": "Login — ADMIN (seeded)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var json = pm.response.json();",
-                  "if (json.accessToken) {",
-                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
-                  "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
-                  "    console.log('Access token saved:', json.accessToken);",
-                  "    console.log('Refresh token saved:', json.refreshToken);",
-                  "    console.log('Account created at:', json.createdAt);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.accessToken) {",
+            "    pm.collectionVariables.set('accessToken',  json.accessToken);",
+            "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+            "    console.log('accessToken:',  json.accessToken);",
+            "    console.log('refreshToken:', json.refreshToken);",
+            "    console.log('createdAt:',    json.createdAt);",
+            "    console.log('expiresIn ms:', json.expiresIn);",
+            "}"
+          ]}}],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@transitops.gh\",\n  \"password\": \"admin1234\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "login"]
-            },
-            "description": "Logs in with the seeded ADMIN account (auto-created on app startup).\n\nSeeded credentials:\n  email: admin@transitops.gh\n  password: admin1234\n  name: Kwame Asante\n\nSaves both `accessToken` and `refreshToken` to collection variables."
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@transitops.gh\",\n  \"password\": \"admin1234\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+            "description": "Seeded credentials: admin@transitops.gh / admin1234 (Kwame Asante)\n\nPrevious tokens for this user are revoked in DB before new ones are saved."
           }
         },
         {
           "name": "Login — DRIVER 1 (seeded)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var json = pm.response.json();",
-                  "if (json.accessToken) {",
-                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
-                  "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
-                  "    console.log('Access token saved:', json.accessToken);",
-                  "    console.log('Refresh token saved:', json.refreshToken);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.accessToken) {",
+            "    pm.collectionVariables.set('accessToken',  json.accessToken);",
+            "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+            "}"
+          ]}}],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"driver1@transitops.gh\",\n  \"password\": \"driver1234\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "login"]
-            },
-            "description": "Logs in with the first seeded DRIVER account.\n\nSeeded credentials:\n  email: driver1@transitops.gh\n  password: driver1234\n  name: Kofi Mensah"
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"driver1@transitops.gh\",\n  \"password\": \"driver1234\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+            "description": "Seeded credentials: driver1@transitops.gh / driver1234 (Kofi Mensah)"
           }
         },
         {
           "name": "Login — DRIVER 2 (seeded)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var json = pm.response.json();",
-                  "if (json.accessToken) {",
-                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
-                  "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
-                  "    console.log('Access token saved:', json.accessToken);",
-                  "    console.log('Refresh token saved:', json.refreshToken);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.accessToken) {",
+            "    pm.collectionVariables.set('accessToken',  json.accessToken);",
+            "    pm.collectionVariables.set('refreshToken', json.refreshToken);",
+            "}"
+          ]}}],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"driver2@transitops.gh\",\n  \"password\": \"driver1234\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "login"]
-            },
-            "description": "Logs in with the second seeded DRIVER account.\n\nSeeded credentials:\n  email: driver2@transitops.gh\n  password: driver1234\n  name: Ama Owusu"
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"driver2@transitops.gh\",\n  \"password\": \"driver1234\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+            "description": "Seeded credentials: driver2@transitops.gh / driver1234 (Ama Owusu)"
           }
         },
         {
           "name": "Refresh Token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var json = pm.response.json();",
-                  "if (json.accessToken) {",
-                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
-                  "    console.log('New access token saved:', json.accessToken);",
-                  "    console.log('Expires in (ms):', json.expiresIn);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "if (json.accessToken) {",
+            "    pm.collectionVariables.set('accessToken', json.accessToken);",
+            "    console.log('New accessToken:', json.accessToken);",
+            "    console.log('expiresIn ms:',   json.expiresIn);",
+            "}"
+          ]}}],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/refresh",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "refresh"]
-            },
-            "description": "Exchange the long-lived refresh token for a new short-lived access token.\n\nThe refresh token itself stays the same (no rotation in this implementation).\nNew `accessToken` is auto-saved to {{accessToken}}.\n\nExpects 400 if the refresh token is expired or invalid."
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api","auth","refresh"] },
+            "description": "Exchange the long-lived refresh token for a new short-lived access token.\n\n- Old access token is revoked in DB\n- New access token is saved to DB\n- Refresh token is reused (not rotated)\n- New accessToken auto-saved to {{accessToken}}"
+          }
+        },
+        {
+          "name": "Sign Out",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = pm.response.json();",
+            "console.log('Logout response:', json.message);",
+            "// Clear saved tokens after logout",
+            "pm.collectionVariables.set('accessToken',  '');",
+            "pm.collectionVariables.set('refreshToken', '');"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api","auth","logout"] },
+            "description": "Revokes ALL tokens for the user in the DB immediately.\n\nAfter logout:\n- The access token is dead even if JWT hasn't expired yet\n- The refresh token is also revoked\n- Collection variables are cleared\n\nExpects: { \"message\": \"Logged out successfully\" }"
           }
         },
         {
@@ -237,16 +145,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@transitops.gh\",\n  \"password\": \"wrongpassword\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "login"]
-            },
-            "description": "Expects 400 Bad Request with { \"error\": \"Bad credentials\" }"
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@transitops.gh\",\n  \"password\": \"wrongpassword\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+            "description": "Expects 400 Bad Request: { \"error\": \"Bad credentials\" }"
           }
         },
         {
@@ -254,16 +155,9 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"email\": \"test@transitops.gh\",\n  \"role\": \"DRIVER\",\n  \"password\": \"123\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "register"]
-            },
-            "description": "Expects 400 with { \"password\": \"Password must be at least 8 characters\" }"
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"email\": \"test@transitops.gh\",\n  \"role\": \"DRIVER\",\n  \"password\": \"123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+            "description": "Expects 400: { \"password\": \"Password must be at least 8 characters\" }"
           }
         },
         {
@@ -271,40 +165,24 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Another\",\n  \"lastName\": \"Admin\",\n  \"email\": \"admin@transitops.gh\",\n  \"role\": \"ADMIN\",\n  \"password\": \"admin1234\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "register"]
-            },
-            "description": "Expects 400 with { \"error\": \"Email already registered\" }"
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Another\",\n  \"lastName\": \"Admin\",\n  \"email\": \"admin@transitops.gh\",\n  \"role\": \"ADMIN\",\n  \"password\": \"admin1234\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+            "description": "Expects 400: { \"error\": \"Email already registered\" }"
           }
         }
       ]
     },
     {
       "name": "Protected Routes",
-      "description": "All requests here require a valid access token. Login first — `accessToken` is auto-saved to collection variables.",
+      "description": "Requires a valid, non-revoked access token. Log in first.",
       "item": [
         {
           "name": "Example — authenticated request",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/example",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "example"]
-            },
-            "description": "Replace /api/example with any real protected route you add later.\n\nIf the access token is missing or expired you get 401 Unauthorized.\nUse the 'Refresh Token' request to get a new access token."
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/example", "host": ["{{baseUrl}}"], "path": ["api","example"] },
+            "description": "Replace with any real protected route.\nExpects 403/404 (route doesn't exist) but NOT 401 — proving auth passed."
           }
         },
         {
@@ -312,30 +190,17 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/example",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "example"]
-            },
-            "description": "Sends request without Authorization header. Expects 401 Unauthorized."
+            "url": { "raw": "{{baseUrl}}/api/example", "host": ["{{baseUrl}}"], "path": ["api","example"] },
+            "description": "No Authorization header → 401 Unauthorized"
           }
         },
         {
-          "name": "Example — refresh token used as access (expect 401)",
+          "name": "Example — revoked token (expect 401)",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{refreshToken}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/example",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "example"]
-            },
-            "description": "Deliberately sends the refresh token as if it were an access token.\nExpects 401 with { \"error\": \"Invalid token type — use an access token\" }"
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/example", "host": ["{{baseUrl}}"], "path": ["api","example"] },
+            "description": "Run Sign Out first, then call this.\nExpects 401: { \"error\": \"Token has been revoked — please log in again\" }"
           }
         }
       ]

@@ -6,11 +6,11 @@ import com.transitops.dto.RefreshRequest;
 import com.transitops.dto.RegisterRequest;
 import com.transitops.entity.User;
 import com.transitops.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +26,7 @@ public class AuthService {
 
     // ── Register ──────────────────────────────────────────────────────────────
 
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already registered");
@@ -41,11 +42,19 @@ public class AuthService {
 
         userRepository.save(user);
 
-        return buildAuthResponse(user, "Account created successfully");
+        String accessToken  = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        user.setAccessToken(accessToken);
+        user.setRefreshToken(refreshToken);
+        userRepository.save(user);
+
+        return buildAuthResponse(user, accessToken, refreshToken, "Account created successfully");
     }
 
     // ── Login ─────────────────────────────────────────────────────────────────
 
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -57,40 +66,69 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return buildAuthResponse(user, "Login successful");
+        String accessToken  = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+
+        user.setAccessToken(accessToken);
+        user.setRefreshToken(refreshToken);
+        userRepository.save(user);
+
+        return buildAuthResponse(user, accessToken, refreshToken, "Login successful");
     }
 
     // ── Refresh ───────────────────────────────────────────────────────────────
 
+    @Transactional
     public AuthResponse refresh(RefreshRequest request) {
-        final String refreshToken = request.getRefreshToken();
-        final String email = jwtService.extractEmail(refreshToken);
+        final String incomingRefresh = request.getRefreshToken();
+        final String email           = jwtService.extractEmail(incomingRefresh);
 
         User user = (User) userDetailsService.loadUserByUsername(email);
 
-        if (!jwtService.isRefreshTokenValid(refreshToken, user)) {
+        // 1. Verify token is cryptographically valid and not expired
+        if (!jwtService.isRefreshTokenValid(incomingRefresh, user)) {
             throw new RuntimeException("Invalid or expired refresh token");
         }
 
-        return AuthResponse.builder()
-                .accessToken(jwtService.generateAccessToken(user))
-                .refreshToken(refreshToken)          // reuse existing refresh token
-                .expiresIn(jwtService.getAccessExpirationMs())
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .role(user.getRole())
-                .createdAt(user.getCreatedAt())
-                .message("Token refreshed successfully")
-                .build();
+        // 2. Verify incoming refresh token matches the stored token (has not been revoked/overwritten)
+        if (user.getRefreshToken() == null || !user.getRefreshToken().equals(incomingRefresh)) {
+            throw new RuntimeException("Refresh token has been revoked");
+        }
+
+        // Issue new access token
+        String newAccessToken = jwtService.generateAccessToken(user);
+        user.setAccessToken(newAccessToken);
+        userRepository.save(user);
+
+        return buildAuthResponse(user, newAccessToken, incomingRefresh, "Token refreshed successfully");
+    }
+
+    // ── Logout ────────────────────────────────────────────────────────────────
+
+    @Transactional
+    public void logout(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Authorization header missing or invalid");
+        }
+
+        final String accessToken = authHeader.substring(7);
+        final String email = jwtService.extractEmail(accessToken);
+
+        User user = (User) userDetailsService.loadUserByUsername(email);
+
+        // Revoke active sessions by clearing tokens
+        user.setAccessToken(null);
+        user.setRefreshToken(null);
+        userRepository.save(user);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private AuthResponse buildAuthResponse(User user, String message) {
+    private AuthResponse buildAuthResponse(User user, String accessToken,
+                                           String refreshToken, String message) {
         return AuthResponse.builder()
-                .accessToken(jwtService.generateAccessToken(user))
-                .refreshToken(jwtService.generateRefreshToken(user))
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .expiresIn(jwtService.getAccessExpirationMs())
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
