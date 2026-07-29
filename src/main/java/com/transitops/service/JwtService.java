@@ -31,6 +31,8 @@ public class JwtService {
 
     // ── Public API ────────────────────────────────────────────────────────────
 
+    // jjwt Claims is unannotated — IDE null-safety warning is a false positive here
+    @SuppressWarnings("null")
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -92,6 +94,8 @@ public class JwtService {
         return extractExpiration(token).before(new Date());
     }
 
+    // jjwt Claims is unannotated — IDE null-safety warning is a false positive here
+    @SuppressWarnings("null")
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
