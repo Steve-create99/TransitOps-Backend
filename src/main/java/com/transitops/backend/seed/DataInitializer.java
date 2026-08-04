@@ -49,6 +49,9 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
         }
 
+        // Ensure a demo DRIVER account exists and is linked for the mobile app
+        ensureDriverUser();
+
         if (settingsRepository.count() == 0) {
             settingsRepository.save(OrganizationSettings.builder()
                     .organizationName("KNUST TransitOps")
@@ -117,11 +120,13 @@ public class DataInitializer implements CommandLineRunner {
                 .status("Active").frequencyMinutes(15).busCount(4).type("Express").direction("Eastbound")
                 .build());
 
+        User driverUser = userRepository.findByEmail("kwame.mensah@transitops.local").orElse(null);
+
         Driver d1 = driverRepository.save(Driver.builder()
                 .firstName("Kwame").lastName("Mensah").phone("+233201111111")
                 .email("kwame.mensah@transitops.local").licenseNumber("GH-DL-1001")
                 .licenseExpiry(LocalDate.now().plusYears(2)).employmentStatus("ACTIVE")
-                .availability("AVAILABLE").assignedRoute(r1).build());
+                .availability("AVAILABLE").assignedRoute(r1).user(driverUser).build());
         Driver d2 = driverRepository.save(Driver.builder()
                 .firstName("Ama").lastName("Osei").phone("+233202222222")
                 .email("ama.osei@transitops.local").licenseNumber("GH-DL-1002")
@@ -177,5 +182,37 @@ public class DataInitializer implements CommandLineRunner {
                         .build());
             }
         }
+
+        // Seed also creates notifications for the driver user
+        if (driverUser != null) {
+            notificationRepository.save(Notification.builder()
+                    .title("Shift assigned — K-01")
+                    .message("You are assigned to Tech Junction – Katanga Circular today.")
+                    .category("SCHEDULE").priority("MEDIUM").user(driverUser).build());
+        }
+    }
+
+    private void ensureDriverUser() {
+        String email = "kwame.mensah@transitops.local";
+        User driverUser = userRepository.findByEmail(email).orElseGet(() ->
+                userRepository.save(User.builder()
+                        .firstName("Kwame")
+                        .lastName("Mensah")
+                        .email(email)
+                        .password(passwordEncoder.encode("Driver@12345"))
+                        .role(Role.DRIVER)
+                        .enabled(true)
+                        .build()));
+
+        driverRepository.findByUserId(driverUser.getId()).or(() ->
+                driverRepository.findAll().stream()
+                        .filter(d -> email.equalsIgnoreCase(d.getEmail()))
+                        .findFirst()
+        ).ifPresent(driver -> {
+            if (driver.getUser() == null) {
+                driver.setUser(driverUser);
+                driverRepository.save(driver);
+            }
+        });
     }
 }

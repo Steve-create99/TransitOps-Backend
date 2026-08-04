@@ -28,6 +28,12 @@ public class Incident {
     @Column(length = 2000)
     private String description;
 
+    private String category;
+
+    private Double latitude;
+
+    private Double longitude;
+
     @Builder.Default
     private String severity = "LOW";
 

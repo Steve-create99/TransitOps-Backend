@@ -31,6 +31,10 @@ public class Attendance {
 
     private String notes;
 
+    private Instant checkInAt;
+
+    private Instant checkOutAt;
+
     @Builder.Default
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

@@ -32,7 +32,8 @@ Notes:
 4. Railway will build with Maven and start via `railway.toml` / `Procfile`.
 5. Verify: `GET https://<railway-host>/api/health` → `{ "status": "UP" }`
 6. Login: `POST /api/auth/login` with bootstrap admin.
-7. Point frontend production build:
+7. Demo driver (mobile app): `kwame.mensah@transitops.local` / `Driver@12345` (seeded & linked on boot).
+8. Point frontend production build:
 
 ```text
 VITE_API_URL=https://<railway-host>/api

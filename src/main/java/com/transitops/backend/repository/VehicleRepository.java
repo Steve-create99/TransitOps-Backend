@@ -14,4 +14,5 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     Page<Vehicle> findByRegistrationNumberContainingIgnoreCase(String reg, Pageable pageable);
     long countByStatusIgnoreCase(String status);
     List<Vehicle> findByStatusIgnoreCase(String status);
+    Optional<Vehicle> findFirstByAssignedDriverId(Long driverId);
 }
