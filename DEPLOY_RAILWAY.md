@@ -21,9 +21,13 @@ CORS_ORIGINS=https://your-frontend-domain,http://localhost:5173
 BOOTSTRAP_ADMIN_EMAIL=admin@yourdomain.com
 BOOTSTRAP_ADMIN_PASSWORD=<strong-password>
 JPA_DDL_AUTO=update
+SPRING_PROFILES_ACTIVE=prod
 ```
 
-Do **not** set `SPRING_PROFILES_ACTIVE=h2` in production.
+Notes:
+- `DATABASE_URL` may be `postgres://...` (Railway style). The app converts it to JDBC automatically.
+- Do **not** set `SPRING_PROFILES_ACTIVE=h2` in production.
+- If you omit `SPRING_PROFILES_ACTIVE` but set `DATABASE_URL`, the app switches to `prod` automatically.
 
 4. Railway will build with Maven and start via `railway.toml` / `Procfile`.
 5. Verify: `GET https://<railway-host>/api/health` → `{ "status": "UP" }`

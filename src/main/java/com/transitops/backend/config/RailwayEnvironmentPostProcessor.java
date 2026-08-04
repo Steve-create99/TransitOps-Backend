@@ -1,7 +1,7 @@
 package com.transitops.backend.config;
 
-import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
@@ -15,12 +15,19 @@ import java.util.Map;
 /**
  * Railway provides DATABASE_URL as postgres://user:pass@host/db.
  * Convert it to JDBC properties before Spring Boot DataSource auto-config runs,
- * and switch active profile from h2 → prod when a real DB URL is present.
+ * and activate the prod profile when a real DB URL is present (unless an explicit
+ * local profile like h2/local was requested via SPRING_PROFILES_ACTIVE).
  */
 public class RailwayEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+        String profileEnv = System.getenv("SPRING_PROFILES_ACTIVE");
+        if (profileEnv != null && (profileEnv.equalsIgnoreCase("h2") || profileEnv.equalsIgnoreCase("local"))) {
+            // Explicit local profiles must not be overridden by Railway DATABASE_URL
+            return;
+        }
+
         String databaseUrl = firstNonBlank(
                 System.getenv("DATABASE_URL"),
                 environment.getProperty("DATABASE_URL")
@@ -31,7 +38,6 @@ public class RailwayEnvironmentPostProcessor implements EnvironmentPostProcessor
 
         Map<String, Object> props = new HashMap<>();
 
-        // Prefer JDBC form if already provided
         if (databaseUrl.startsWith("jdbc:")) {
             props.put("spring.datasource.url", databaseUrl);
         } else {
@@ -61,11 +67,7 @@ public class RailwayEnvironmentPostProcessor implements EnvironmentPostProcessor
         props.put("spring.datasource.driver-class-name", "org.postgresql.Driver");
         props.put("spring.jpa.properties.hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
 
-        // If profile was left at default h2, force prod when DATABASE_URL exists
-        String active = environment.getProperty("spring.profiles.active", "");
-        String envProfile = System.getenv("SPRING_PROFILES_ACTIVE");
-        if ((envProfile == null || envProfile.isBlank())
-                && (active == null || active.isBlank() || "h2".equalsIgnoreCase(active))) {
+        if (profileEnv == null || profileEnv.isBlank()) {
             props.put("spring.profiles.active", "prod");
             environment.setActiveProfiles("prod");
         }

@@ -1,1 +1,1 @@
-org.springframework.boot.EnvironmentPostProcessor=com.transitops.backend.config.RailwayEnvironmentPostProcessor
+org.springframework.boot.env.EnvironmentPostProcessor=com.transitops.backend.config.RailwayEnvironmentPostProcessor

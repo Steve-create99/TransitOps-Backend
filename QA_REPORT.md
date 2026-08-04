@@ -28,6 +28,7 @@ Full-stack production suite implemented: Spring Boot API (auth, domain CRUD, das
 3. **Secrets in `porpmt.md`** — removed plaintext DB URL/password from draft file.
 4. **Mock KPIs / Reports** — replaced with `/api/dashboard` and `/api/reports`.
 5. **Open ADMIN registration** — blocked in `AuthService` + Login UI.
+6. **Railway boot crash** — Spring Boot 4 `EnvironmentPostProcessor` package mismatch + raw `postgres://` DATABASE_URL. Fixed with `RailwayEnvironmentPostProcessor`, `application-prod`, nixpacks/railway build commands.
 
 ## Backend endpoints delivered
 
