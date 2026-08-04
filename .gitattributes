@@ -1,2 +1,4 @@
-/mvnw text eol=lf
+# Maven wrapper must use LF so Railway/Linux can execute it
+mvnw text eol=lf
 *.cmd text eol=crlf
+*.sh text eol=lf
