@@ -1,4 +1,5 @@
-Regardlessof the porpt we would use neon postgresql. Here is the url to input inot the .env= postgresql://neondb_owner:npg_A8ZozEKBHJV2@ep-rapid-base-at98cp4r.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require
+# NOTE: Secrets removed. Configure Neon via application-local.properties or Railway env vars.
+# This file is a historical auth draft — live code lives under src/main/java.
 
 // ============================================================
 //  TransitOps — Spring Boot JWT Authentication Setup
