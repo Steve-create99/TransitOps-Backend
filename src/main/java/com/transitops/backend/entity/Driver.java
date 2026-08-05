@@ -59,4 +59,20 @@ public class Driver {
     void onUpdate() {
         updatedAt = Instant.now();
     }
+
+    /** Factory that does not rely on Lombok {@code builder()} (safer under constrained CI heaps). */
+    public static Driver invited(String firstName, String lastName, String email, String phone,
+                                 String licenseNumber, User user) {
+        Driver driver = new Driver();
+        driver.setFirstName(firstName);
+        driver.setLastName(lastName);
+        driver.setEmail(email);
+        driver.setPhone(phone);
+        driver.setLicenseNumber(licenseNumber);
+        driver.setEmploymentStatus("INVITED");
+        driver.setAvailability("OFF_DUTY");
+        driver.setUser(user);
+        driver.setCreatedAt(Instant.now());
+        return driver;
+    }
 }

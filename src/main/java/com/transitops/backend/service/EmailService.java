@@ -1,6 +1,7 @@
 package com.transitops.backend.service;
 
 import lombok.Builder;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -26,15 +27,15 @@ public class EmailService {
             .connectTimeout(Duration.ofSeconds(15))
             .build();
 
-    /** Immutable send outcome — use fully-qualified Lombok @Value to avoid clash with Spring @Value. */
-    @lombok.Value
+    /** Immutable send outcome. Avoid Lombok @Value here — it clashes with Spring's @Value import. */
+    @Getter
     @Builder
     public static class SendResult {
-        boolean configured;
-        boolean sent;
-        int httpStatus;
-        String reason;
-        boolean testingDomainRestricted;
+        private final boolean configured;
+        private final boolean sent;
+        private final int httpStatus;
+        private final String reason;
+        private final boolean testingDomainRestricted;
     }
 
     public boolean isConfigured() {

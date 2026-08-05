@@ -1,11 +1,12 @@
 [build]
 builder = "NIXPACKS"
-# Cap Maven heap so Nixpacks builders do not OOM during annotation processing / package.
-buildCommand = "MAVEN_OPTS='-Xmx768m -XX:+UseSerialGC' ./mvnw -DskipTests -B package"
+# Keep Maven heap UNDER Railway builder RAM (~512MB–1GB). 768m was oversized and can OOM
+# annotation processing (Lombok), which surfaces as "cannot find symbol: builder()".
+buildCommand = "export MAVEN_OPTS='-Xmx384m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC' JAVA_TOOL_OPTIONS='-Xmx384m' && ./mvnw -DskipTests -B package"
 
 [deploy]
-# Cap runtime heap on Railway hobby memory; leave headroom for native/metaspace.
-startCommand = "java -Xms128m -Xmx512m -XX:+UseSerialGC -jar target/backend-0.0.1-SNAPSHOT.jar"
+# Leave headroom for metaspace/native on small Railway instances.
+startCommand = "java -Xms64m -Xmx384m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -jar target/backend-0.0.1-SNAPSHOT.jar"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

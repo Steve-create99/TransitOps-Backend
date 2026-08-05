@@ -85,16 +85,13 @@ public class InviteService {
                 .enabled(false)
                 .build());
 
-        Driver driver = Driver.builder()
-                .firstName(req.getFirstName().trim())
-                .lastName(req.getLastName().trim())
-                .email(email)
-                .phone(req.getPhone())
-                .licenseNumber(license)
-                .employmentStatus("INVITED")
-                .availability("OFF_DUTY")
-                .user(user)
-                .build();
+        Driver driver = Driver.invited(
+                req.getFirstName().trim(),
+                req.getLastName().trim(),
+                email,
+                req.getPhone(),
+                license,
+                user);
         if (req.getAssignedRouteId() != null) {
             driver.setAssignedRoute(routeRepository.findById(req.getAssignedRouteId())
                     .orElseThrow(() -> new ApiException("Route not found", HttpStatus.NOT_FOUND)));
@@ -167,16 +164,13 @@ public class InviteService {
         user.setEnabled(false);
 
         Driver driver = driverRepository.findByUserId(user.getId())
-                .orElseGet(() -> driverRepository.save(Driver.builder()
-                        .firstName(req.getFirstName().trim())
-                        .lastName(req.getLastName().trim())
-                        .email(user.getEmail())
-                        .phone(req.getPhone())
-                        .licenseNumber(blankToNull(req.getLicenseNumber()))
-                        .employmentStatus("INVITED")
-                        .availability("OFF_DUTY")
-                        .user(user)
-                        .build()));
+                .orElseGet(() -> driverRepository.save(Driver.invited(
+                        req.getFirstName().trim(),
+                        req.getLastName().trim(),
+                        user.getEmail(),
+                        req.getPhone(),
+                        blankToNull(req.getLicenseNumber()),
+                        user)));
         driver.setFirstName(req.getFirstName().trim());
         driver.setLastName(req.getLastName().trim());
         driver.setPhone(req.getPhone());
