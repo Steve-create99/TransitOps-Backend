@@ -19,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/vehicles")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
 public class VehicleController {
 
     private final VehicleService vehicleService;
@@ -42,13 +43,11 @@ public class VehicleController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
     public VehicleDtos.Response create(@Valid @RequestBody VehicleDtos.Request request, @AuthenticationPrincipal User user) {
         return vehicleService.create(request, user.getEmail());
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
     public VehicleDtos.Response update(
             @PathVariable Long id,
             @Valid @RequestBody VehicleDtos.Request request,
@@ -65,7 +64,6 @@ public class VehicleController {
     }
 
     @PostMapping("/{id}/gps")
-    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER','DRIVER')")
     public VehicleDtos.Response gpsPing(
             @PathVariable Long id,
             @RequestBody VehicleDtos.GpsPing ping,
@@ -80,7 +78,6 @@ public class VehicleController {
     }
 
     @PostMapping("/{id}/maintenance")
-    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
     public MaintenanceRecord addMaintenance(
             @PathVariable Long id,
             @RequestBody VehicleDtos.MaintenanceRequest request,

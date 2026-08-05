@@ -16,6 +16,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
 public class ReportController {
 
     private final ReportService reportService;
@@ -26,7 +27,6 @@ public class ReportController {
     }
 
     @GetMapping("/export.csv")
-    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
     public ResponseEntity<String> exportCsv(@RequestParam(defaultValue = "weekly") String period) {
         String csv = reportService.toCsv(period);
         return ResponseEntity.ok()

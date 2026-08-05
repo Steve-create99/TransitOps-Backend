@@ -21,7 +21,9 @@ public class RouteController {
 
     private final RouteService routeService;
 
+    /** Read allowed for DRIVER (mobile companion + assigned-route views). Mutations stay staff-only. */
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER','DRIVER')")
     public PageResponse<RouteDtos.Response> list(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
@@ -31,6 +33,7 @@ public class RouteController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER','DRIVER')")
     public RouteDtos.Response get(@PathVariable Long id) {
         return routeService.get(id);
     }

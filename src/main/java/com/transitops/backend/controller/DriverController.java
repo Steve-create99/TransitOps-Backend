@@ -23,6 +23,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/drivers")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
 public class DriverController {
 
     private final DriverService driverService;
@@ -56,13 +57,11 @@ public class DriverController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
     public DriverDtos.Response create(@Valid @RequestBody DriverDtos.Request request, @AuthenticationPrincipal User user) {
         return driverService.create(request, user.getEmail());
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
     public DriverDtos.Response update(
             @PathVariable Long id,
             @Valid @RequestBody DriverDtos.Request request,
@@ -84,7 +83,6 @@ public class DriverController {
     }
 
     @PostMapping("/{id}/incidents")
-    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER','DRIVER')")
     public Incident addIncident(
             @PathVariable Long id,
             @Valid @RequestBody DriverDtos.IncidentRequest request,
@@ -99,7 +97,6 @@ public class DriverController {
     }
 
     @PostMapping("/{id}/attendance")
-    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER')")
     public Attendance addAttendance(
             @PathVariable Long id,
             @RequestBody DriverDtos.AttendanceRequest request,

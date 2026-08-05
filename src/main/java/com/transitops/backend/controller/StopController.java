@@ -21,7 +21,9 @@ public class StopController {
 
     private final StopService stopService;
 
+    /** Read allowed for DRIVER (mobile companion). Mutations stay staff-only. */
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER','DRIVER')")
     public PageResponse<StopDtos.Response> list(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String zone,
@@ -31,6 +33,7 @@ public class StopController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER','DRIVER')")
     public StopDtos.Response get(@PathVariable Long id) {
         return stopService.get(id);
     }

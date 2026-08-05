@@ -24,7 +24,9 @@ public class ScheduleController {
 
     private final ScheduleService scheduleService;
 
+    /** Read allowed for DRIVER (mobile companion). Mutations stay staff-only. */
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER','DRIVER')")
     public PageResponse<ScheduleDtos.Response> list(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Long routeId,
@@ -34,6 +36,7 @@ public class ScheduleController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','DISPATCHER','DRIVER')")
     public ScheduleDtos.Response get(@PathVariable Long id) {
         return scheduleService.get(id);
     }

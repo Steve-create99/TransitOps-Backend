@@ -1,5 +1,6 @@
 package com.transitops.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,6 +21,7 @@ public class Incident {
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "user", "assignedRoute", "assignedVehicle"})
     private Driver driver;
 
     @Column(nullable = false)

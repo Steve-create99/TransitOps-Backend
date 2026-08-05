@@ -1,0 +1,2 @@
+﻿{"sessionId":"be8849","runId":"post-fix","hypothesisId":"H2-oom","location":"railway.toml","message":"lowered Maven heap from 768m to 384m","data":{"reason":"768m exceeds typical Railway builder RAM and OOMs Lombok APT","localPackageExit":0,"mavenXmx":"384m"},"timestamp":1754414400000}
+{"sessionId":"be8849","runId":"post-fix","hypothesisId":"H1-builder","location":"Driver.invited","message":"InviteService no longer calls Driver.builder","data":{"factory":"Driver.invited","emailSendResult":"Getter+Builder no lombok.Value"},"timestamp":1754414410000}
