@@ -13,16 +13,22 @@
 3. Add variables:
 
 ```text
-DATABASE_URL=postgres://USER:PASSWORD@HOST/DB?sslmode=require
-JWT_SECRET=<base64-secret>
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
+JWT_SECRET=<long-random-secret>
 JWT_ACCESS_EXPIRATION=900000
 JWT_REFRESH_EXPIRATION=604800000
-CORS_ORIGINS=https://your-frontend-domain,http://localhost:5173
+CORS_ORIGINS=https://transitops-frontend.pages.dev,http://localhost:5173
 BOOTSTRAP_ADMIN_EMAIL=admin@yourdomain.com
 BOOTSTRAP_ADMIN_PASSWORD=<strong-password>
 JPA_DDL_AUTO=update
 SPRING_PROFILES_ACTIVE=prod
 ```
+
+Local reference copy (gitignored): see [`.env`](.env) and template [`.env.example`](.env.example).
+
+**CORS tip:** use the site origin only (`https://transitops-frontend.pages.dev`), not `/dashboard`.
+
+**JWT tip:** expirations are **milliseconds** (`900000` = 15m, `604800000` = 7d), not `15m` / `7d`.
 
 Notes:
 - `DATABASE_URL` may be `postgres://...` (Railway style). The app converts it to JDBC automatically.
