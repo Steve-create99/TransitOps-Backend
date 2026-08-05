@@ -2,7 +2,6 @@ package com.transitops.backend.service;
 
 import com.transitops.backend.dto.auth.*;
 import com.transitops.backend.entity.RefreshToken;
-import com.transitops.backend.entity.Role;
 import com.transitops.backend.entity.User;
 import com.transitops.backend.exception.ApiException;
 import com.transitops.backend.repository.RefreshTokenRepository;
@@ -31,24 +30,11 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (request.getRole() == Role.ADMIN) {
-            throw new ApiException("Admin accounts cannot self-register. Contact an administrator.", HttpStatus.FORBIDDEN);
-        }
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new ApiException("Email already registered", HttpStatus.CONFLICT);
-        }
-
-        User user = User.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .email(request.getEmail().toLowerCase().trim())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
-                .enabled(true)
-                .build();
-        userRepository.save(user);
-        auditService.log(user.getEmail(), "REGISTER", "User", String.valueOf(user.getId()), "Self registration");
-        return buildAuthResponse(user, "Account created successfully");
+        // Production: self-registration disabled — admins invite users via Settings
+        throw new ApiException(
+                "Self-registration is disabled. Ask an administrator to invite your account.",
+                HttpStatus.FORBIDDEN
+        );
     }
 
     @Transactional

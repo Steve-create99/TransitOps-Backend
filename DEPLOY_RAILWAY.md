@@ -31,18 +31,22 @@ Local reference copy (gitignored): see [`.env`](.env) and template [`.env.exampl
 **JWT tip:** expirations are **milliseconds** (`900000` = 15m, `604800000` = 7d), not `15m` / `7d`.
 
 Notes:
-- `DATABASE_URL` may be `postgres://...` (Railway style). The app converts it to JDBC automatically.
+- `DATABASE_URL` may be `postgres://...` or `postgresql://...`. The app converts it to JDBC automatically.
 - Do **not** set `SPRING_PROFILES_ACTIVE=h2` in production.
 - If you omit `SPRING_PROFILES_ACTIVE` but set `DATABASE_URL`, the app switches to `prod` automatically.
+- **Self-registration is disabled** — invite via Settings (ADMIN) or use seed accounts.
+- Demo logins: Admin `admin@transitops.local` / `Admin@12345`; Driver `kwame.mensah@transitops.local` / `Driver@12345`.
+- Current production host: `https://web-production-f8ec21.up.railway.app`
+- Known debt: Hibernate `ddl-auto=update` (Flyway deferred).
 
 4. Railway will build with Maven and start via `railway.toml` / `Procfile`.
-5. Verify: `GET https://<railway-host>/api/health` → `{ "status": "UP" }`
+5. Verify: `GET https://web-production-f8ec21.up.railway.app/api/health` → `{ "status": "UP" }`
 6. Login: `POST /api/auth/login` with bootstrap admin.
 7. Demo driver (mobile app): `kwame.mensah@transitops.local` / `Driver@12345` (seeded & linked on boot).
 8. Point frontend production build:
 
 ```text
-VITE_API_URL=https://<railway-host>/api
+VITE_API_URL=https://web-production-f8ec21.up.railway.app/api
 ```
 
 Then `npm run build` in the TransitOps frontend and deploy the `dist/` folder.

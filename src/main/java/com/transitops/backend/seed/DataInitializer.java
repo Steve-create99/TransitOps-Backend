@@ -27,6 +27,7 @@ public class DataInitializer implements CommandLineRunner {
     private final NotificationRepository notificationRepository;
     private final OrganizationSettingsRepository settingsRepository;
     private final TripMetricRepository tripMetricRepository;
+    private final MaintenanceRecordRepository maintenanceRecordRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${transitops.bootstrap.admin-email}")
@@ -62,6 +63,7 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         if (stopRepository.count() > 0) {
+            enrichDemoFleetIfNeeded();
             return;
         }
 
@@ -119,6 +121,24 @@ public class DataInitializer implements CommandLineRunner {
                 .intermediateStops(List.of("Main Gate", "College of Engineering", "College of Science"))
                 .status("Active").frequencyMinutes(15).busCount(4).type("Express").direction("Eastbound")
                 .build());
+        RouteEntity r4 = routeRepository.save(RouteEntity.builder()
+                .code("K-04").name("Commercial Shuttle").color("#8B5CF6")
+                .startStop("Commercial Area / Market").endStop("Tech Junction")
+                .intermediateStops(List.of("Continental Roundabout", "Main Gate"))
+                .status("Active").frequencyMinutes(20).busCount(3).type("Shuttle").direction("Southbound")
+                .build());
+        RouteEntity r5 = routeRepository.save(RouteEntity.builder()
+                .code("K-05").name("New Site Connector").color("#EC4899")
+                .startStop("New Site Terminal").endStop("Tech Junction")
+                .intermediateStops(List.of("College of Science", "Main Gate"))
+                .status("Active").frequencyMinutes(25).busCount(2).type("Connector").direction("Westbound")
+                .build());
+        RouteEntity r6 = routeRepository.save(RouteEntity.builder()
+                .code("K-06").name("Library – Stadium Loop").color("#EF4444")
+                .startStop("Prempeh II Library").endStop("Prempeh II Library")
+                .intermediateStops(List.of("Great Hall", "University Hall / Katanga", "Commercial Area / Market"))
+                .status("Active").frequencyMinutes(18).busCount(3).type("Circular").direction("Clockwise")
+                .build());
 
         User driverUser = userRepository.findByEmail("kwame.mensah@transitops.local").orElse(null);
 
@@ -132,6 +152,16 @@ public class DataInitializer implements CommandLineRunner {
                 .email("ama.osei@transitops.local").licenseNumber("GH-DL-1002")
                 .licenseExpiry(LocalDate.now().plusYears(1)).employmentStatus("ACTIVE")
                 .availability("ON_SHIFT").assignedRoute(r2).build());
+        Driver d3 = driverRepository.save(Driver.builder()
+                .firstName("Kofi").lastName("Asante").phone("+233203333333")
+                .email("kofi.asante@transitops.local").licenseNumber("GH-DL-1003")
+                .licenseExpiry(LocalDate.now().plusYears(3)).employmentStatus("ACTIVE")
+                .availability("AVAILABLE").assignedRoute(r4).build());
+        Driver d4 = driverRepository.save(Driver.builder()
+                .firstName("Efua").lastName("Boateng").phone("+233204444444")
+                .email("efua.boateng@transitops.local").licenseNumber("GH-DL-1004")
+                .licenseExpiry(LocalDate.now().plusMonths(10)).employmentStatus("ACTIVE")
+                .availability("AVAILABLE").assignedRoute(r5).build());
 
         Vehicle v1 = vehicleRepository.save(Vehicle.builder()
                 .registrationNumber("GR-1001-22").make("Yutong").model("ZK6122")
@@ -148,6 +178,29 @@ public class DataInitializer implements CommandLineRunner {
                 .capacity(45).status("AVAILABLE").fuelLevel(90.0).gpsStatus("ONLINE")
                 .latitude(6.6712).longitude(-1.5749).assignedRoute(r3)
                 .maintenanceDue(LocalDate.now().plusMonths(3)).build());
+        Vehicle v4 = vehicleRepository.save(Vehicle.builder()
+                .registrationNumber("GR-1004-22").make("Golden Dragon").model("XML6125")
+                .capacity(50).status("ACTIVE").fuelLevel(55.0).gpsStatus("ONLINE")
+                .latitude(6.6760).longitude(-1.5670).assignedRoute(r4).assignedDriver(d3)
+                .maintenanceDue(LocalDate.now().plusWeeks(3)).build());
+        vehicleRepository.save(Vehicle.builder()
+                .registrationNumber("GR-1005-22").make("Toyota").model("Hiace")
+                .capacity(18).status("ACTIVE").fuelLevel(71.0).gpsStatus("ONLINE")
+                .latitude(6.6690).longitude(-1.5638).assignedRoute(r5).assignedDriver(d4)
+                .maintenanceDue(LocalDate.now().plusMonths(2)).build());
+        vehicleRepository.save(Vehicle.builder()
+                .registrationNumber("GR-1006-22").make("Yutong").model("ZK6122")
+                .capacity(45).status("MAINTENANCE").fuelLevel(40.0).gpsStatus("OFFLINE")
+                .latitude(6.6754).longitude(-1.5688).assignedRoute(r6)
+                .maintenanceDue(LocalDate.now().minusDays(2))
+                .maintenanceNotes("Brake inspection in progress").build());
+
+        maintenanceRecordRepository.save(MaintenanceRecord.builder()
+                .vehicle(v1).serviceDate(LocalDate.now().minusDays(40))
+                .description("Scheduled oil and filter service").cost(850.0).build());
+        maintenanceRecordRepository.save(MaintenanceRecord.builder()
+                .vehicle(v4).serviceDate(LocalDate.now().minusDays(12))
+                .description("Tire rotation and alignment").cost(420.0).build());
 
         LocalDate today = LocalDate.now();
         scheduleRepository.save(Schedule.builder()
@@ -170,7 +223,7 @@ public class DataInitializer implements CommandLineRunner {
 
         for (int i = 0; i < 7; i++) {
             LocalDate day = today.minusDays(i);
-            for (RouteEntity route : List.of(r1, r2, r3)) {
+            for (RouteEntity route : List.of(r1, r2, r3, r4, r5, r6)) {
                 tripMetricRepository.save(TripMetric.builder()
                         .route(route)
                         .metricDate(day)
@@ -189,6 +242,74 @@ public class DataInitializer implements CommandLineRunner {
                     .title("Shift assigned — K-01")
                     .message("You are assigned to Tech Junction – Katanga Circular today.")
                     .category("SCHEDULE").priority("MEDIUM").user(driverUser).build());
+        }
+    }
+
+    /** Adds missing KNUST demo routes/fleet on already-seeded databases without wiping data. */
+    private void enrichDemoFleetIfNeeded() {
+        if (routeRepository.existsByCode("K-04")) {
+            return;
+        }
+        RouteEntity r4 = routeRepository.save(RouteEntity.builder()
+                .code("K-04").name("Commercial Shuttle").color("#8B5CF6")
+                .startStop("Commercial Area / Market").endStop("Tech Junction")
+                .intermediateStops(List.of("Continental Roundabout", "Main Gate"))
+                .status("Active").frequencyMinutes(20).busCount(3).type("Shuttle").direction("Southbound")
+                .build());
+        RouteEntity r5 = routeRepository.save(RouteEntity.builder()
+                .code("K-05").name("New Site Connector").color("#EC4899")
+                .startStop("New Site Terminal").endStop("Tech Junction")
+                .intermediateStops(List.of("College of Science", "Main Gate"))
+                .status("Active").frequencyMinutes(25).busCount(2).type("Connector").direction("Westbound")
+                .build());
+        RouteEntity r6 = routeRepository.save(RouteEntity.builder()
+                .code("K-06").name("Library – Stadium Loop").color("#EF4444")
+                .startStop("Prempeh II Library").endStop("Prempeh II Library")
+                .intermediateStops(List.of("Great Hall", "University Hall / Katanga", "Commercial Area / Market"))
+                .status("Active").frequencyMinutes(18).busCount(3).type("Circular").direction("Clockwise")
+                .build());
+
+        Driver d3 = driverRepository.save(Driver.builder()
+                .firstName("Kofi").lastName("Asante").phone("+233203333333")
+                .email("kofi.asante@transitops.local").licenseNumber("GH-DL-1003")
+                .licenseExpiry(LocalDate.now().plusYears(3)).employmentStatus("ACTIVE")
+                .availability("AVAILABLE").assignedRoute(r4).build());
+
+        Vehicle v = vehicleRepository.save(Vehicle.builder()
+                .registrationNumber("GR-1004-22").make("Golden Dragon").model("XML6125")
+                .capacity(50).status("ACTIVE").fuelLevel(55.0).gpsStatus("ONLINE")
+                .latitude(6.6760).longitude(-1.5670).assignedRoute(r4).assignedDriver(d3)
+                .maintenanceDue(LocalDate.now().plusWeeks(3)).build());
+        vehicleRepository.save(Vehicle.builder()
+                .registrationNumber("GR-1005-22").make("Toyota").model("Hiace")
+                .capacity(18).status("ACTIVE").fuelLevel(71.0).gpsStatus("ONLINE")
+                .latitude(6.6690).longitude(-1.5638).assignedRoute(r5)
+                .maintenanceDue(LocalDate.now().plusMonths(2)).build());
+        vehicleRepository.save(Vehicle.builder()
+                .registrationNumber("GR-1006-22").make("Yutong").model("ZK6122")
+                .capacity(45).status("MAINTENANCE").fuelLevel(40.0).gpsStatus("OFFLINE")
+                .latitude(6.6754).longitude(-1.5688).assignedRoute(r6)
+                .maintenanceDue(LocalDate.now().minusDays(2))
+                .maintenanceNotes("Brake inspection in progress").build());
+
+        maintenanceRecordRepository.save(MaintenanceRecord.builder()
+                .vehicle(v).serviceDate(LocalDate.now().minusDays(12))
+                .description("Tire rotation and alignment").cost(420.0).build());
+
+        LocalDate today = LocalDate.now();
+        for (int i = 0; i < 7; i++) {
+            LocalDate day = today.minusDays(i);
+            for (RouteEntity route : List.of(r4, r5, r6)) {
+                tripMetricRepository.save(TripMetric.builder()
+                        .route(route)
+                        .metricDate(day)
+                        .passengers(150 + (i * 10) + route.getBusCount() * 8)
+                        .completedTrips(15 + route.getBusCount())
+                        .delayedTrips(i % 2)
+                        .averageSpeed(15.0 + (i % 3))
+                        .onTimePercentage(86.0 + (i % 8))
+                        .build());
+            }
         }
     }
 
