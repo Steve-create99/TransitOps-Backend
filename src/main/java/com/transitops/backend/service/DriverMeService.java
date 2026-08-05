@@ -36,6 +36,8 @@ public class DriverMeService {
     private final IncidentRepository incidentRepository;
     private final VehicleService vehicleService;
     private final AuditService auditService;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /** In-memory trip status for the mobile companion (keyed by driver id). */
     private final Map<Long, TripSession> tripSessions = new ConcurrentHashMap<>();
@@ -232,6 +234,16 @@ public class DriverMeService {
                 .build();
         incidentRepository.save(incident);
         auditService.log(user.getEmail(), "CREATE", "Incident", String.valueOf(incident.getId()), title);
+        String msg = driver.getFirstName() + " " + driver.getLastName() + ": " + title
+                + (severity != null ? " (" + severity + ")" : "");
+        String priority = "HIGH".equalsIgnoreCase(severity) || "CRITICAL".equalsIgnoreCase(severity) ? "HIGH" : "MEDIUM";
+        for (User admin : userRepository.findByRole(Role.ADMIN)) {
+            try {
+                notificationService.create("New incident", msg, "INCIDENT", priority, admin.getId());
+            } catch (Exception ignored) {
+                // best-effort
+            }
+        }
         return incident;
     }
 

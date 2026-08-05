@@ -3,11 +3,14 @@ package com.transitops.backend.service;
 import com.transitops.backend.dto.ScheduleDtos;
 import com.transitops.backend.dto.common.PageResponse;
 import com.transitops.backend.entity.Driver;
+import com.transitops.backend.entity.Role;
 import com.transitops.backend.entity.Schedule;
+import com.transitops.backend.entity.User;
 import com.transitops.backend.entity.Vehicle;
 import com.transitops.backend.exception.ApiException;
 import com.transitops.backend.repository.DriverRepository;
 import com.transitops.backend.repository.ScheduleRepository;
+import com.transitops.backend.repository.UserRepository;
 import com.transitops.backend.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,7 +30,9 @@ public class ScheduleService {
     private final RouteService routeService;
     private final DriverRepository driverRepository;
     private final VehicleRepository vehicleRepository;
+    private final UserRepository userRepository;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @Transactional(readOnly = true)
     public PageResponse<ScheduleDtos.Response> list(LocalDate date, Long routeId, Pageable pageable) {
@@ -60,6 +65,18 @@ public class ScheduleService {
         Schedule s = map(find(id), req);
         detectConflicts(s);
         auditService.log(actor, "UPDATE", "Schedule", String.valueOf(id), "Updated");
+        if ("DELAYED".equalsIgnoreCase(s.getDelayStatus()) || "DELAYED".equalsIgnoreCase(s.getStatus())) {
+            String routeCode = s.getRoute() != null ? s.getRoute().getCode() : "route";
+            String msg = "Schedule for " + routeCode + " marked delayed"
+                    + (s.getDelayMinutes() > 0 ? " by " + s.getDelayMinutes() + " min" : "") + ".";
+            for (User admin : userRepository.findByRole(Role.ADMIN)) {
+                try {
+                    notificationService.create("Route delay", msg, "DELAY", "HIGH", admin.getId());
+                } catch (Exception ignored) {
+                    // best-effort
+                }
+            }
+        }
         return ScheduleDtos.Response.from(s);
     }
 

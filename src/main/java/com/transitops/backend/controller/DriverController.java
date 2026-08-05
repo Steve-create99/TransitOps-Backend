@@ -1,11 +1,13 @@
 package com.transitops.backend.controller;
 
 import com.transitops.backend.dto.DriverDtos;
+import com.transitops.backend.dto.InviteDtos;
 import com.transitops.backend.dto.common.PageResponse;
 import com.transitops.backend.entity.Attendance;
 import com.transitops.backend.entity.Incident;
 import com.transitops.backend.entity.User;
 import com.transitops.backend.service.DriverService;
+import com.transitops.backend.service.InviteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +26,7 @@ import java.util.Map;
 public class DriverController {
 
     private final DriverService driverService;
+    private final InviteService inviteService;
 
     @GetMapping
     public PageResponse<DriverDtos.Response> list(
@@ -41,6 +44,15 @@ public class DriverController {
     @GetMapping("/{id}/profile")
     public Map<String, Object> profile(@PathVariable Long id) {
         return driverService.profileBundle(id);
+    }
+
+    @PostMapping("/invite")
+    @PreAuthorize("hasRole('ADMIN')")
+    public InviteDtos.InviteCreatedResponse invite(
+            @Valid @RequestBody InviteDtos.DriverInviteRequest request,
+            @AuthenticationPrincipal User user
+    ) {
+        return inviteService.inviteDriver(request, user.getEmail());
     }
 
     @PostMapping

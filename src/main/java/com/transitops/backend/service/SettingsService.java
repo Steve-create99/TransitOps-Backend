@@ -1,12 +1,13 @@
 package com.transitops.backend.service;
 
+import com.transitops.backend.dto.InviteDtos;
 import com.transitops.backend.entity.OrganizationSettings;
 import com.transitops.backend.entity.Role;
 import com.transitops.backend.entity.User;
 import com.transitops.backend.exception.ApiException;
 import com.transitops.backend.repository.OrganizationSettingsRepository;
 import com.transitops.backend.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -17,13 +18,27 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 public class SettingsService {
 
     private final OrganizationSettingsRepository settingsRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final InviteService inviteService;
+
+    public SettingsService(
+            OrganizationSettingsRepository settingsRepository,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            AuditService auditService,
+            @Lazy InviteService inviteService
+    ) {
+        this.settingsRepository = settingsRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.auditService = auditService;
+        this.inviteService = inviteService;
+    }
 
     public OrganizationSettings get() {
         return settingsRepository.findAll().stream().findFirst()
@@ -51,13 +66,30 @@ public class SettingsService {
         return userRepository.findAll(pageable);
     }
 
+    /**
+     * Invite a staff user. DRIVER role uses the email invite + accept flow.
+     * Other roles get a pending disabled account (password set by admin or temporary).
+     */
     @Transactional
-    public User inviteUser(Map<String, String> body, String actor) {
+    public Object inviteUser(Map<String, String> body, String actor) {
+        Role role = Role.valueOf(body.getOrDefault("role", "DISPATCHER").toUpperCase());
+        if (role == Role.DRIVER) {
+            InviteDtos.DriverInviteRequest req = new InviteDtos.DriverInviteRequest();
+            req.setEmail(body.get("email"));
+            req.setFirstName(body.getOrDefault("firstName", "Invited"));
+            req.setLastName(body.getOrDefault("lastName", "Driver"));
+            req.setPhone(body.get("phone"));
+            req.setLicenseNumber(body.get("licenseNumber"));
+            if (body.get("assignedRouteId") != null && !body.get("assignedRouteId").isBlank()) {
+                req.setAssignedRouteId(Long.valueOf(body.get("assignedRouteId")));
+            }
+            return inviteService.inviteDriver(req, actor);
+        }
+
         String email = body.get("email");
-        if (email == null || userRepository.existsByEmail(email)) {
+        if (email == null || userRepository.existsByEmail(email.toLowerCase().trim())) {
             throw new ApiException("Email invalid or already registered", HttpStatus.CONFLICT);
         }
-        Role role = Role.valueOf(body.getOrDefault("role", "DISPATCHER"));
         User user = User.builder()
                 .firstName(body.getOrDefault("firstName", "Invited"))
                 .lastName(body.getOrDefault("lastName", "User"))

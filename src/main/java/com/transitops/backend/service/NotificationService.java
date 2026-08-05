@@ -6,7 +6,7 @@ import com.transitops.backend.entity.User;
 import com.transitops.backend.exception.ApiException;
 import com.transitops.backend.repository.NotificationRepository;
 import com.transitops.backend.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -16,11 +16,21 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final PushService pushService;
+
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            UserRepository userRepository,
+            @Lazy PushService pushService
+    ) {
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
+        this.pushService = pushService;
+    }
 
     @Transactional(readOnly = true)
     public PageResponse<Notification> list(User user, String category, String search, Pageable pageable) {
@@ -85,7 +95,14 @@ public class NotificationService {
                 .priority(priority != null ? priority : "MEDIUM")
                 .user(target)
                 .build();
-        return notificationRepository.save(n);
+        notificationRepository.save(n);
+
+        try {
+            pushService.notifyUser(target.getId(), n.getTitle(), n.getMessage(), "/notifications");
+        } catch (Exception ignored) {
+            // push is best-effort
+        }
+        return n;
     }
 
     private Notification findOwned(Long id, User user) {

@@ -26,6 +26,7 @@ public class DriverService {
     private final IncidentRepository incidentRepository;
     private final AttendanceRepository attendanceRepository;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     public PageResponse<DriverDtos.Response> list(String search, Pageable pageable) {
         Page<Driver> page = (search != null && !search.isBlank())
@@ -76,7 +77,21 @@ public class DriverService {
                 .build();
         incidentRepository.save(i);
         auditService.log(actor, "CREATE", "Incident", String.valueOf(i.getId()), req.getTitle());
+        notifyAdminsOfIncident(d, i.getTitle(), i.getSeverity());
         return i;
+    }
+
+    private void notifyAdminsOfIncident(Driver d, String title, String severity) {
+        String msg = d.getFirstName() + " " + d.getLastName() + ": " + title
+                + (severity != null ? " (" + severity + ")" : "");
+        String priority = "HIGH".equalsIgnoreCase(severity) || "CRITICAL".equalsIgnoreCase(severity) ? "HIGH" : "MEDIUM";
+        for (User admin : userRepository.findByRole(Role.ADMIN)) {
+            try {
+                notificationService.create("New incident", msg, "INCIDENT", priority, admin.getId());
+            } catch (Exception ignored) {
+                // best-effort
+            }
+        }
     }
 
     public List<Attendance> attendance(Long driverId) {

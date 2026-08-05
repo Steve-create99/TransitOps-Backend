@@ -39,8 +39,8 @@ public class SettingsController {
         return PageResponse.from(settingsService.users(pageable));
     }
 
-    @PostMapping("/users/invite")
-    public User invite(@RequestBody Map<String, String> body, @AuthenticationPrincipal User user) {
+    @PostMapping({"/users/invite", "/users"})
+    public Object invite(@RequestBody Map<String, String> body, @AuthenticationPrincipal User user) {
         return settingsService.inviteUser(body, user.getEmail());
     }
 

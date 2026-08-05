@@ -45,7 +45,10 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
                 .orElseThrow(() -> new ApiException("User not found", HttpStatus.NOT_FOUND));
         if (!user.isEnabled()) {
-            throw new ApiException("Account is disabled", HttpStatus.FORBIDDEN);
+            throw new ApiException(
+                    "Account is not active yet. If you were invited, open your invite email and set a password first.",
+                    HttpStatus.FORBIDDEN
+            );
         }
         auditService.log(user.getEmail(), "LOGIN", "User", String.valueOf(user.getId()), "Login success");
         return buildAuthResponse(user, "Login successful");
@@ -78,6 +81,12 @@ public class AuthService {
                 .lastName(user.getLastName())
                 .role(user.getRole())
                 .build();
+    }
+
+    /** Issue a fresh access + refresh token pair (used after invite acceptance). */
+    @Transactional
+    public AuthResponse issueTokens(User user, String message) {
+        return buildAuthResponse(user, message);
     }
 
     private AuthResponse buildAuthResponse(User user, String message) {
