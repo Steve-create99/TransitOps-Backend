@@ -22,6 +22,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
     public PageResponse<Notification> list(User user, String category, String search, Pageable pageable) {
         Page<Notification> page = (category != null && !category.isBlank())
                 ? notificationRepository.findByUserIdAndArchivedFalseAndCategoryIgnoreCase(user.getId(), category, pageable)
