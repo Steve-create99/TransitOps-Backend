@@ -55,6 +55,8 @@ public final class InviteDtos {
         private String status;
         private Instant expiresAt;
         private boolean emailSent;
+        /** Accept link for admin copy/share when email delivery fails. */
+        private String acceptUrl;
         private String message;
     }
 }

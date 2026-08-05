@@ -50,12 +50,28 @@ public class InviteService {
     @Transactional
     public InviteDtos.InviteCreatedResponse inviteDriver(InviteDtos.DriverInviteRequest req, String actorEmail) {
         String email = req.getEmail().toLowerCase().trim();
+        String license = blankToNull(req.getLicenseNumber());
+        // #region agent log
+        debugLog("A", "InviteService.inviteDriver:entry",
+                "{\"emailDomain\":\"" + emailDomain(email) + "\",\"hasLicense\":" + (license != null)
+                        + ",\"licenseLen\":" + (license == null ? 0 : license.length())
+                        + ",\"userExists\":" + userRepository.existsByEmail(email)
+                        + ",\"licenseTaken\":" + (license != null && driverRepository.findByLicenseNumber(license).isPresent()) + "}");
+        // #endregion
+        assertLicenseAvailable(license, null);
+
         if (userRepository.existsByEmail(email)) {
             User existing = userRepository.findByEmail(email).orElseThrow();
             if (existing.isEnabled()) {
+                // #region agent log
+                debugLog("B", "InviteService.inviteDriver:enabledConflict", "{\"branch\":\"enabled_user\"}");
+                // #endregion
                 throw new ApiException("A user with this email already exists", HttpStatus.CONFLICT);
             }
             // Re-invite: refresh token for pending account
+            // #region agent log
+            debugLog("D", "InviteService.inviteDriver:reissue", "{\"branch\":\"reissue\"}");
+            // #endregion
             return reissueInvite(existing, req, actorEmail);
         }
 
@@ -74,7 +90,7 @@ public class InviteService {
                 .lastName(req.getLastName().trim())
                 .email(email)
                 .phone(req.getPhone())
-                .licenseNumber(blankToNull(req.getLicenseNumber()))
+                .licenseNumber(license)
                 .employmentStatus("INVITED")
                 .availability("OFF_DUTY")
                 .user(user)
@@ -83,10 +99,31 @@ public class InviteService {
             driver.setAssignedRoute(routeRepository.findById(req.getAssignedRouteId())
                     .orElseThrow(() -> new ApiException("Route not found", HttpStatus.NOT_FOUND)));
         }
-        driverRepository.save(driver);
+        try {
+            driverRepository.save(driver);
+            // #region agent log
+            debugLog("A", "InviteService.inviteDriver:driverSaved", "{\"ok\":true,\"driverId\":" + driver.getId() + "}");
+            // #endregion
+        } catch (Exception ex) {
+            // #region agent log
+            String em = ex.getMessage() == null ? "" : ex.getMessage();
+            debugLog("A", "InviteService.inviteDriver:driverSaveFail",
+                    "{\"ok\":false,\"dupLicense\":" + (em.contains("license_number") || em.contains("duplicate key"))
+                            + ",\"exClass\":\"" + ex.getClass().getSimpleName() + "\"}");
+            // #endregion
+            throw ex;
+        }
 
         InviteToken invite = createToken(user, driver, actorEmail);
-        boolean emailSent = sendInviteEmail(invite);
+        String acceptUrl = buildAcceptUrl(invite);
+        EmailService.SendResult emailResult = deliverInviteEmail(invite, acceptUrl);
+        // #region agent log
+        debugLog("C", "InviteService.inviteDriver:email",
+                "{\"emailSent\":" + emailResult.isSent()
+                        + ",\"httpStatus\":" + emailResult.getHttpStatus()
+                        + ",\"testingDomainRestricted\":" + emailResult.isTestingDomainRestricted()
+                        + ",\"configured\":" + emailResult.isConfigured() + "}");
+        // #endregion
 
         auditService.log(actorEmail, "INVITE", "Driver", String.valueOf(driver.getId()), email);
         pushService.notifyRole(Role.ADMIN, "Driver invite sent",
@@ -97,7 +134,9 @@ public class InviteService {
             if (admin != null) {
                 notificationService.create(
                         "Driver invite sent",
-                        "Invitation emailed to " + email,
+                        emailResult.isSent()
+                                ? "Invitation emailed to " + email
+                                : "Invite created for " + email + " (email not delivered — share accept link)",
                         "SYSTEM",
                         "LOW",
                         admin.getId()
@@ -113,10 +152,9 @@ public class InviteService {
                 .email(email)
                 .status("INVITED")
                 .expiresAt(invite.getExpiresAt())
-                .emailSent(emailSent)
-                .message(emailSent
-                        ? "Invitation email sent"
-                        : "Invite created but email was not sent (check RESEND_API_KEY)")
+                .emailSent(emailResult.isSent())
+                .acceptUrl(acceptUrl)
+                .message(inviteMessage(emailResult, false))
                 .build();
     }
 
@@ -143,12 +181,15 @@ public class InviteService {
         driver.setLastName(req.getLastName().trim());
         driver.setPhone(req.getPhone());
         if (req.getLicenseNumber() != null && !req.getLicenseNumber().isBlank()) {
-            driver.setLicenseNumber(req.getLicenseNumber().trim());
+            String nextLicense = req.getLicenseNumber().trim();
+            assertLicenseAvailable(nextLicense, driver.getId());
+            driver.setLicenseNumber(nextLicense);
         }
         driver.setEmploymentStatus("INVITED");
 
         InviteToken invite = createToken(user, driver, actorEmail);
-        boolean emailSent = sendInviteEmail(invite);
+        String acceptUrl = buildAcceptUrl(invite);
+        EmailService.SendResult emailResult = deliverInviteEmail(invite, acceptUrl);
         auditService.log(actorEmail, "REINVITE", "Driver", String.valueOf(driver.getId()), user.getEmail());
 
         return InviteDtos.InviteCreatedResponse.builder()
@@ -157,8 +198,9 @@ public class InviteService {
                 .email(user.getEmail())
                 .status("INVITED")
                 .expiresAt(invite.getExpiresAt())
-                .emailSent(emailSent)
-                .message(emailSent ? "Invitation email resent" : "Invite refreshed but email was not sent")
+                .emailSent(emailResult.isSent())
+                .acceptUrl(acceptUrl)
+                .message(inviteMessage(emailResult, true))
                 .build();
     }
 
@@ -262,13 +304,43 @@ public class InviteService {
         return inviteTokenRepository.save(token);
     }
 
-    private boolean sendInviteEmail(InviteToken invite) {
+    private String buildAcceptUrl(InviteToken invite) {
         String base = frontendUrl == null ? "https://transitops-frontend.pages.dev" : frontendUrl.replaceAll("/+$", "");
-        String acceptUrl = base + "/invite/accept?token=" + invite.getToken();
+        return base + "/invite/accept?token=" + invite.getToken();
+    }
+
+    private EmailService.SendResult deliverInviteEmail(InviteToken invite, String acceptUrl) {
         String expiresLabel = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm z")
                 .withZone(ZoneId.of("Africa/Accra"))
                 .format(invite.getExpiresAt());
-        return emailService.sendDriverInvite(invite.getEmail(), invite.getFirstName(), acceptUrl, expiresLabel);
+        return emailService.sendDriverInviteDetailed(invite.getEmail(), invite.getFirstName(), acceptUrl, expiresLabel);
+    }
+
+    private static String inviteMessage(EmailService.SendResult emailResult, boolean reissue) {
+        if (emailResult.isSent()) {
+            return reissue ? "Invitation email resent" : "Invitation email sent";
+        }
+        String prefix = reissue ? "Invite refreshed but email was not sent. " : "Invite created but email was not sent. ";
+        String reason = emailResult.getReason() == null || emailResult.getReason().isBlank()
+                ? "Share the accept link with the driver."
+                : emailResult.getReason();
+        return prefix + reason + " Copy the accept link from the response and share it with the driver.";
+    }
+
+    private void assertLicenseAvailable(String license, Long excludeDriverId) {
+        if (license == null) {
+            return;
+        }
+        var existing = driverRepository.findByLicenseNumber(license);
+        if (existing.isEmpty()) {
+            return;
+        }
+        if (excludeDriverId != null && excludeDriverId.equals(existing.get().getId())) {
+            return;
+        }
+        throw new ApiException(
+                "License number already belongs to another driver. Use a unique license or leave it blank.",
+                HttpStatus.CONFLICT);
     }
 
     private String newToken() {
@@ -284,4 +356,24 @@ public class InviteService {
     private static String blankToNull(String v) {
         return v == null || v.isBlank() ? null : v.trim();
     }
+
+    // #region agent log
+    private static String emailDomain(String email) {
+        int i = email == null ? -1 : email.indexOf('@');
+        return i < 0 ? "unknown" : email.substring(i + 1);
+    }
+
+    private static void debugLog(String hypothesisId, String location, String dataJson) {
+        try {
+            java.nio.file.Path path = java.nio.file.Path.of("debug-be8849.log");
+            String line = "{\"sessionId\":\"be8849\",\"runId\":\"pre-fix\",\"hypothesisId\":\""
+                    + hypothesisId + "\",\"location\":\"" + location + "\",\"message\":\"" + location
+                    + "\",\"data\":" + dataJson + ",\"timestamp\":" + System.currentTimeMillis() + "}\n";
+            java.nio.file.Files.writeString(path, line,
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception ignored) {
+            // debug only
+        }
+    }
+    // #endregion
 }

@@ -1,5 +1,7 @@
 package com.transitops.backend.service;
 
+import lombok.Builder;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -25,14 +27,43 @@ public class EmailService {
             .connectTimeout(Duration.ofSeconds(15))
             .build();
 
+    @Value
+    @Builder
+    public static class SendResult {
+        boolean configured;
+        boolean sent;
+        int httpStatus;
+        String reason;
+        boolean testingDomainRestricted;
+    }
+
     public boolean isConfigured() {
         return apiKey != null && !apiKey.isBlank();
     }
 
+    public boolean usesTestingFromDomain() {
+        String from = fromEmail == null ? "" : fromEmail.toLowerCase();
+        return from.contains("@resend.dev");
+    }
+
     public boolean send(String to, String subject, String html) {
+        return sendDetailed(to, subject, html).isSent();
+    }
+
+    public SendResult sendDetailed(String to, String subject, String html) {
         if (!isConfigured()) {
             log.warn("RESEND_API_KEY not set — skipping email to {}", to);
-            return false;
+            // #region agent log
+            debugEmailLog("C", "EmailService.sendDetailed:unconfigured",
+                    "{\"configured\":false,\"usesTestingFrom\":" + usesTestingFromDomain() + "}");
+            // #endregion
+            return SendResult.builder()
+                    .configured(false)
+                    .sent(false)
+                    .httpStatus(0)
+                    .reason("RESEND_API_KEY is not set on the server")
+                    .testingDomainRestricted(false)
+                    .build();
         }
         try {
             String body = """
@@ -53,19 +84,61 @@ public class EmailService {
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                log.info("Resend email accepted for {} (HTTP {})", to, response.statusCode());
-                return true;
+            int status = response.statusCode();
+            String respBody = response.body() == null ? "" : response.body();
+            if (status >= 200 && status < 300) {
+                log.info("Resend email accepted for {} (HTTP {})", to, status);
+                // #region agent log
+                debugEmailLog("C", "EmailService.sendDetailed:ok",
+                        "{\"configured\":true,\"httpStatus\":" + status + ",\"usesTestingFrom\":" + usesTestingFromDomain() + "}");
+                // #endregion
+                return SendResult.builder()
+                        .configured(true)
+                        .sent(true)
+                        .httpStatus(status)
+                        .reason("ok")
+                        .testingDomainRestricted(false)
+                        .build();
             }
-            log.error("Resend email failed for {} — HTTP {}: {}", to, response.statusCode(), response.body());
-            return false;
+            boolean testingRestriction = status == 403 && (
+                    respBody.contains("only send testing emails")
+                            || respBody.contains("verify a domain")
+                            || usesTestingFromDomain()
+            );
+            String reason = testingRestriction
+                    ? "Resend testing domain can only email your Resend account address. Verify a domain at resend.com/domains and set RESEND_FROM_EMAIL to an address on that domain."
+                    : summarizeResendError(status, respBody);
+            log.error("Resend email failed for {} — HTTP {}: {}", to, status, respBody);
+            // #region agent log
+            debugEmailLog("C", "EmailService.sendDetailed:fail",
+                    "{\"configured\":true,\"httpStatus\":" + status
+                            + ",\"testingDomainRestricted\":" + testingRestriction
+                            + ",\"usesTestingFrom\":" + usesTestingFromDomain() + "}");
+            // #endregion
+            return SendResult.builder()
+                    .configured(true)
+                    .sent(false)
+                    .httpStatus(status)
+                    .reason(reason)
+                    .testingDomainRestricted(testingRestriction)
+                    .build();
         } catch (Exception ex) {
             log.error("Resend email error for {}: {}", to, ex.getMessage());
-            return false;
+            // #region agent log
+            debugEmailLog("C", "EmailService.sendDetailed:exception",
+                    "{\"configured\":true,\"exClass\":\"" + ex.getClass().getSimpleName() + "\"}");
+            // #endregion
+            return SendResult.builder()
+                    .configured(true)
+                    .sent(false)
+                    .httpStatus(0)
+                    .reason("Email provider error: " + (ex.getMessage() == null ? "unknown" : ex.getMessage()))
+                    .testingDomainRestricted(false)
+                    .build();
         }
     }
 
-    public boolean sendDriverInvite(String to, String firstName, String acceptUrl, String expiresLabel) {
+    public SendResult sendDriverInviteDetailed(String to, String firstName, String acceptUrl, String expiresLabel) {
         String subject = "You're invited to KNUST TransitOps Driver Companion";
         String safeName = firstName != null && !firstName.isBlank() ? firstName : "Driver";
         String html = """
@@ -116,7 +189,22 @@ public class EmailService {
                 </body>
                 </html>
                 """.formatted(escapeHtml(safeName), acceptUrl, escapeHtml(expiresLabel), acceptUrl);
-        return send(to, subject, html);
+        return sendDetailed(to, subject, html);
+    }
+
+    public boolean sendDriverInvite(String to, String firstName, String acceptUrl, String expiresLabel) {
+        return sendDriverInviteDetailed(to, firstName, acceptUrl, expiresLabel).isSent();
+    }
+
+    private static String summarizeResendError(int status, String body) {
+        String snippet = body == null ? "" : body.replaceAll("\\s+", " ").trim();
+        if (snippet.length() > 180) {
+            snippet = snippet.substring(0, 180) + "…";
+        }
+        if (snippet.isBlank()) {
+            return "Resend rejected the email (HTTP " + status + ")";
+        }
+        return "Resend rejected the email (HTTP " + status + "): " + snippet;
     }
 
     private static String jsonString(String value) {
@@ -138,4 +226,19 @@ public class EmailService {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;");
     }
+
+    // #region agent log
+    private static void debugEmailLog(String hypothesisId, String location, String dataJson) {
+        try {
+            java.nio.file.Path path = java.nio.file.Path.of("debug-be8849.log");
+            String line = "{\"sessionId\":\"be8849\",\"runId\":\"post-fix\",\"hypothesisId\":\""
+                    + hypothesisId + "\",\"location\":\"" + location + "\",\"message\":\"" + location
+                    + "\",\"data\":" + dataJson + ",\"timestamp\":" + System.currentTimeMillis() + "}\n";
+            java.nio.file.Files.writeString(path, line,
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception ignored) {
+            // debug only
+        }
+    }
+    // #endregion
 }
